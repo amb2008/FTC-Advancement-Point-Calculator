@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>FTC Advancement Points Calculator</title>
+<style>
+  /* Dark theme base */
+  body {
+    background-color: #121212;
+    color: #E0E0E0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0; padding: 0; min-height: 100vh;
+    display: flex; flex-direction: column; align-items: center;
+  }
+  
+  h1 {
+    margin-top: 30px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+  }
+
+  /* Container for form */
+  #container {
+    background: #1E1E1E;
+    padding: 30px 40px;
+    border-radius: 10px;
+    margin-top: 20px;
+    width: 380px;
+    box-shadow: 0 0 15px rgba(0,0,0,0.8);
+  }
+
+  label {
+    display: flex;
+    justify-content: space-between;
+    font-weight: 600;
+    margin-bottom: 14px;
+    color: #BBBBBB;
+  }
+
+  input[type=number] {
+    width: 90px;
+    background: #2A2A2A;
+    border: 1.5px solid #555;
+    border-radius: 6px;
+    color: #eee;
+    font-size: 16px;
+    text-align: right;
+    transition: border-color 0.2s ease;
+  }
+  input[type=number]:focus {
+    outline: none;
+    border-color: #4CAF50;
+    background: #333;
+  }
+
+  /* Buttons style */
+  button {
+    width: 100%;
+    padding: 12px 0;
+    margin-top: 18px;
+    font-weight: 700;
+    font-size: 16px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+
+  #calculate {
+    background-color: #4CAF50;
+    color: #121212;
+  }
+  #calculate:hover:not(:disabled) {
+    background-color: #43a047;
+  }
+
+  #stop {
+    background-color: #E53935;
+    color: white;
+    margin-top: 8px;
+  }
+  #stop:hover:not(:disabled) {
+    background-color: #d32f2f;
+  }
+  #stop:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* Output box */
+  #output {
+    margin-top: 30px;
+    background: #222;
+    border-radius: 10px;
+    padding: 15px 20px;
+    width: 90vw;
+    max-width: 1000px;
+    height: 420px;
+    overflow-y: auto;
+    text-align: center;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 14px;
+    color: #C8FFC8;
+    white-space: pre-wrap;
+    box-shadow: inset 0 0 8px #0f0f0f;
+  }
+
+  /* Responsive adjustments */
+  @media (max-width: 450px) {
+    #container {
+      width: 90vw;
+      padding: 20px;
+    }
+    input[type=number] {
+      width: 70px;
+    }
+  }
+</style>
+</head>
+<body>
+
+<h1>FTC Advancement Points Calculator</h1>
+
+<div id="container">
+  <label>
+    Number of Teams:
+    <input type="number" id="teams" value="16" min="1" max="100" />
+  </label>
+  <label>
+    Number of Alliances In Playoffs:
+    <input type="number" id="alliances" value="4" min="1" max="20" />
+  </label>
+  <label>
+    Number of Inspire Awards:
+    <input type="number" id="inspires" value="3" min="0" max="10" />
+  </label>
+  <!-- Removed input for awards -->
+  <label>
+    Number of Advancement Slots:
+    <input type="number" id="slots" value="4" min="1" max="100" />
+  </label>
+
+  <button id="calculate">Calculate</button>
+</div>
+
+<pre id="output">Input your competition's parameters and press "Calculate" to see the minimum advancement points you'll need to guarantee qualification.</pre>
+
+<script>
+// Award points constant - always 7 each of 12, 6, 3 points
+const AWARD_POINTS_ALL = Array(7).fill(12).concat(Array(7).fill(6)).concat(Array(7).fill(3));
+
+// erfinv function
+function erfinv(x) {
+  var a = 0.147;
+  var ln = Math.log(1 - x*x);
+  var part1 = 2/(Math.PI * a) + ln/2;
+  var part2 = 1/(a) * ln;
+  var sign = (x < 0) ? -1 : 1;
+  return sign * Math.sqrt( Math.sqrt(part1*part1 - part2) - part1 );
+}
+
+function points(teams, rank, alliance_num, alliance_place, inspire, award) {
+  const places = [40, 20, 10, 5];
+  const inspires = [60, 30, 15];
+  const awards = [12, 6, 3];
+  let score = 0;
+  const numerator = teams - 2*rank + 2;
+  const denominator = 1.07 * teams;
+  const val = numerator / denominator;
+  score += Math.floor(erfinv(val) * (7 / erfinv(1/1.07)) + 9.5);
+  if (alliance_num !== 0) score += alliance_num;
+  if (alliance_place > 0 && alliance_place < 5) score += places[alliance_place - 1];
+  if (inspire > 0) score += inspires[inspire - 1];
+  if (award > 0) score += awards[award - 1];
+  return score;
+}
+
+function shuffleArray(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+    let j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+  return array;
+}
+
+async function worstCaseMinPointsSampling(teams, number_of_alliances, num_inspire, slots, outputFunc, stopFlag) {
+  const base_place_pts = [40, 20, 10, 5];
+  const base_scores = [];
+  for (let r = 1; r <= teams; r++) {
+    base_scores.push(points(teams, r, 0, 0, 0, 0));
+  }
+  const seed_pts = [];
+  for (let a = 1; a <= number_of_alliances; a++) seed_pts.push(21 - a);
+  const place_pts = base_place_pts.slice(0, number_of_alliances);
+  while (place_pts.length < number_of_alliances) place_pts.push(0);
+  const alliance_bonus_per_alliance = [];
+  for (let i = 0; i < number_of_alliances; i++) {
+    alliance_bonus_per_alliance.push(seed_pts[i] + place_pts[i]);
+  }
+  const alliance_teams_count = 2 * number_of_alliances;
+  const alliance_team_indices = Array.from({length: alliance_teams_count}, (_, i) => i);
+  const all_team_indices = Array.from({length: teams}, (_, i) => i);
+  const inspire_points = [60, 30, 15].slice(0, num_inspire);
+  
+  // Always use all 21 awards (7 each of 12,6,3)
+  const award_points = AWARD_POINTS_ALL;
+
+  let max_threshold = 0;
+  let best_scores_detail = null;
+  let iterations = 0;
+
+  while (!stopFlag.stopped) {
+    iterations++;
+    let shuffledTeams = shuffleArray([...all_team_indices]);
+    let inspire_assignment = shuffledTeams.slice(0, num_inspire);
+    let remaining_for_award = shuffledTeams.slice(num_inspire);
+    remaining_for_award = shuffleArray(remaining_for_award);
+    let award_assignment = remaining_for_award.slice(0, award_points.length);
+    let award_perm = shuffleArray([...award_points]);
+
+    const team_to_award = {};
+    for (let i = 0; i < award_assignment.length; i++) {
+      team_to_award[award_assignment[i]] = award_perm[i];
+    }
+
+    let invalid = false;
+    const scores_detail = [];
+
+    for (let i = 0; i < teams; i++) {
+      const base = base_scores[i];
+      let alliance_bonus = 0;
+      if (alliance_team_indices.includes(i)) {
+        const alliance_index = Math.floor(i / 2);
+        alliance_bonus = alliance_bonus_per_alliance[alliance_index];
+      }
+      let inspire_bonus = 0;
+      if (inspire_assignment.includes(i)) {
+        const idx = inspire_assignment.indexOf(i);
+        inspire_bonus = inspire_points[idx];
+      }
+      const award_bonus = team_to_award[i] || 0;
+      if (inspire_bonus > 0 && award_bonus > 0) {
+        invalid = true;
+        break;
+      }
+      const total = base + alliance_bonus + inspire_bonus + award_bonus;
+      scores_detail.push({team: i + 1, base, alliance_bonus, inspire_bonus, award_bonus, total});
+    }
+    if (invalid) continue;
+
+    scores_detail.sort((a,b) => b.total - a.total);
+    const threshold = scores_detail[slots - 1].total;
+
+    if (threshold > max_threshold) {
+      max_threshold = threshold;
+      best_scores_detail = scores_detail;
+      outputFunc(best_scores_detail, max_threshold, iterations);
+    }
+
+    if (iterations % 100 === 0) {
+      await new Promise(r => setTimeout(r, 0));
+    }
+  }
+
+  return max_threshold;
+}
+
+function formatOutput(scores_detail, threshold, iterations=0) {
+  let out = `Worst case min points to guarantee slot:\nThreshold: ${threshold}\n\n`;
+  out += `Team | BasePts | Alliance | Inspire | Award | Total\n`;
+  out += '--------------------------------------------------\n';
+  for (const d of scores_detail) {
+    out += `${d.team.toString().padStart(4)} | `
+      + `${d.base.toString().padStart(7)} | `
+      + `${d.alliance_bonus.toString().padStart(8)} | `
+      + `${d.inspire_bonus.toString().padStart(7)} | `
+      + `${d.award_bonus.toString().padStart(5)} | `
+      + `${d.total.toString().padStart(5)}\n`;
+  }
+  return out;
+}
+
+const stopFlag = { stopped: false };
+
+document.getElementById('calculate').onclick = async () => {
+  stopFlag.stopped = false;
+  const teams = +document.getElementById('teams').value;
+  const alliances = +document.getElementById('alliances').value;
+  const inspires = +document.getElementById('inspires').value;
+  const slots = +document.getElementById('slots').value;
+  const output = document.getElementById('output');
+
+  try {
+    await worstCaseMinPointsSampling(teams, alliances, inspires, slots, (scores, threshold, iterations) => {
+      output.textContent = formatOutput(scores, threshold, iterations);
+    }, stopFlag);
+    if (!stopFlag.stopped) output.textContent += "\n\nCalculation complete.";
+  } catch (e) {
+    output.textContent = "Error: " + e.message;
+  }
+};
+
+document.getElementById('stop').onclick = () => {
+  stopFlag.stopped = true;
+};
+</script>
+
+</body>
+</html>
