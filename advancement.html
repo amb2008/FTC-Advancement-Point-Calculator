@@ -102,9 +102,8 @@
   }
   /* Scroll container for table */
   #outputWrapper {
-    /* max-height: 420px; */
+    max-height: 420px;
     margin-top: 30px;
-    margin-bottom: 100px;
     overflow-y: auto;
     width: 90vw;
     max-width: 1000px;
@@ -186,7 +185,7 @@
       </tr>
     </thead>
     <tbody id="outputBody">
-      <tr><td colspan="6">No data yet.</td></tr>
+      <tr><td colspan="6">Press calculate!</td></tr>
     </tbody>
   </table>
 </div>
@@ -197,7 +196,7 @@
   <table id="pathsTable">
     <thead>
       <tr>
-        <th>Rank (Base)</th>
+        <th>Rank</th>
         <th>Alliance Seed</th>
         <th>Placement</th>
         <th>Inspire</th>
@@ -206,7 +205,7 @@
       </tr>
     </thead>
     <tbody id="pathsBody">
-      <tr><td colspan="6">No data yet.</td></tr>
+
     </tbody>
   </table>
 </div>
@@ -465,23 +464,23 @@ function formatOutput(scores_detail, threshold, iterations=0) {
 
     // Team (team number - base points)
     const teamCell = document.createElement('td');
-    teamCell.textContent = `${d.team} - ${d.base}`;
+    teamCell.textContent = `Rank ${d.team} - ${d.base}pts`;
 
     // Alliance Seed (seed - pts)
     const seedCell = document.createElement('td');
-    seedCell.textContent = d.alliance_seed > 0 ? `${d.alliance_seed} - ${d.alliance_seed_pts}` : '-';
+    seedCell.textContent = d.alliance_seed > 0 ? `Alliance ${d.alliance_seed} - ${d.alliance_seed_pts}pts` : '-';
 
     // Alliance Placement (place - pts)
     const placeCell = document.createElement('td');
-    placeCell.textContent = d.alliance_place > 0 ? `${d.alliance_place} - ${d.alliance_place_pts}` : '-';
+    placeCell.textContent = d.alliance_place > 0 ? `Place ${d.alliance_place} - ${d.alliance_place_pts}pts` : '-';
 
     // Inspire (pts)
     const inspireCell = document.createElement('td');
-    inspireCell.textContent = d.inspire_bonus > 0 ? d.inspire_bonus : '-';
+    inspireCell.textContent = d.inspire_bonus > 0 ? `${d.inspire_bonus}pts` : '-';
 
     // Award (pts)
     const awardCell = document.createElement('td');
-    awardCell.textContent = d.award_bonus > 0 ? d.award_bonus : '-';
+    awardCell.textContent = d.award_bonus > 0 ? `${d.award_bonus}pts` : '-';
 
     // Total
     const totalCell = document.createElement('td');
@@ -550,12 +549,11 @@ function computeWaysToReachThreshold(threshold, teams, alliances, inspires) {
             const total = b.base + s.pts + p.pts + insp + aw;
             if (total === threshold) {
               results.push({
-                rank: b.rank,
-                base: b.base,
-                seed: s.seed ? `${s.seed} (${s.pts})` : "-",
-                place: p.place ? `${p.place} (${p.pts})` : "-",
-                inspire: insp || "-",
-                award: aw || "-",
+                rank: `${b.rank} - ${b.base}pts`,
+                seed: s.seed ? `${s.seed} - ${s.pts}pts` : "-",
+                place: p.place ? `${p.place} - ${p.pts}pts` : "-",
+                inspire: insp ? insp + "pts" : "-",
+                award: aw ? aw + "pts" : "-",
                 total
               });
             }
@@ -573,7 +571,7 @@ function computeWaysToReachThreshold(threshold, teams, alliances, inspires) {
   for (const r of results) {
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td>${r.rank} (${r.base})</td>
+      <td>${r.rank}</td>
       <td>${r.seed}</td>
       <td>${r.place}</td>
       <td>${r.inspire}</td>
