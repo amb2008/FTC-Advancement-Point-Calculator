@@ -113,6 +113,25 @@
     /* box-shadow: inset 0 0 8px #0f0f0f; */
   }
 
+  #pathsTable {
+  width:90vw;
+  max-width:900px;
+  border-collapse:collapse;
+  margin-bottom:60px;
+  font-family:Courier New, monospace;
+  }
+
+  #pathsTable th, #pathsTable td {
+    border:1px solid #444;
+    padding:6px;
+    text-align:center;
+  }
+
+  #pathsTable th {
+    background:#333;
+  }
+
+
   /* Responsive adjustments */
   @media (max-width: 450px) {
     #container {
@@ -171,6 +190,27 @@
     </tbody>
   </table>
 </div>
+
+<h2 style="margin-top:40px;color:#C8FFC8;">Ways to Reach Threshold Score</h2>
+
+<div id="pathsWrapper">
+  <table id="pathsTable">
+    <thead>
+      <tr>
+        <th>Rank (Base)</th>
+        <th>Alliance Seed</th>
+        <th>Placement</th>
+        <th>Inspire</th>
+        <th>Award</th>
+        <th>Total</th>
+      </tr>
+    </thead>
+    <tbody id="pathsBody">
+      <tr><td colspan="6">No data yet.</td></tr>
+    </tbody>
+  </table>
+</div>
+
 
 <script>
 // Award points constant - always 7 each of 12, 6, 3 points
@@ -473,6 +513,75 @@ function formatOutput(scores_detail, threshold, iterations=0) {
   return headerInfo;
 }
 
+function computeWaysToReachThreshold(threshold, teams, alliances, inspires) {
+  const tbody = document.getElementById("pathsBody");
+  tbody.innerHTML = "";
+
+  const baseScores = [];
+  for (let r = 1; r <= teams; r++) {
+    baseScores.push({ rank: r, base: points(teams, r, 0, 0, 0, 0) });
+  }
+
+  const seedPts = [];
+  for (let a = 1; a <= alliances; a++) seedPts.push({ seed: a, pts: 21 - a });
+
+  const placePts = [
+    { place: 1, pts: 40 },
+    { place: 2, pts: 20 },
+    { place: 3, pts: 10 },
+    { place: 4, pts: 5 },
+    { place: 0, pts: 0 }
+  ];
+
+  const inspirePts = [0, 60, 30, 15].slice(0, inspires + 1);
+  const awardPts = [0, 12, 6, 3];
+
+  const results = [];
+
+  for (const b of baseScores) {
+    for (const s of [{seed:0,pts:0}, ...seedPts]) {
+      for (const p of placePts) {
+        if ((s.seed === 0) !== (p.place === 0)) continue;
+
+        for (const insp of inspirePts) {
+          for (const aw of awardPts) {
+            if (insp > 0 && aw > 0) continue;
+
+            const total = b.base + s.pts + p.pts + insp + aw;
+            if (total === threshold) {
+              results.push({
+                rank: b.rank,
+                base: b.base,
+                seed: s.seed ? `${s.seed} (${s.pts})` : "-",
+                place: p.place ? `${p.place} (${p.pts})` : "-",
+                inspire: insp || "-",
+                award: aw || "-",
+                total
+              });
+            }
+          }
+        }
+      }
+    }
+  }
+
+  if (results.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="6">No valid paths</td></tr>`;
+    return;
+  }
+
+  for (const r of results) {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${r.rank} (${r.base})</td>
+      <td>${r.seed}</td>
+      <td>${r.place}</td>
+      <td>${r.inspire}</td>
+      <td>${r.award}</td>
+      <td>${r.total}</td>`;
+    tbody.appendChild(tr);
+  }
+}
 
 
 const stopFlag = { stopped: false };
@@ -492,6 +601,12 @@ document.getElementById('calculate').onclick = async () => {
       const headerInfo = `Minimum points to guarantee advancment in worst case:\n${threshold}`;
       formatOutput(scores, threshold, iterations);
       outputHeader.textContent = headerInfo;
+      computeWaysToReachThreshold(
+        threshold,
+        teams,
+        alliances,
+        inspires
+      );
     }, stopFlag);
     if (!stopFlag.stopped) {
       outputHeader.textContent += "\nCalculation complete.";
