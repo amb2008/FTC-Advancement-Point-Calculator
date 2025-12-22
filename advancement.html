@@ -75,35 +75,42 @@
     background-color: #43a047;
   }
 
-  #stop {
-    background-color: #E53935;
-    color: white;
-    margin-top: 8px;
-  }
-  #stop:hover:not(:disabled) {
-    background-color: #d32f2f;
-  }
-  #stop:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-
-  /* Output box */
-  #output {
-    margin-top: 30px;
-    background: #222;
-    border-radius: 10px;
-    padding: 15px 20px;
+  /* Output table */
+  #outputTable {
     width: 90vw;
     max-width: 1000px;
-    height: 420px;
-    overflow-y: auto;
-    text-align: center;
+    border-collapse: collapse;
+    box-shadow: 0 0 15px rgba(0,0,0,0.7);
     font-family: 'Courier New', Courier, monospace;
     font-size: 14px;
     color: #C8FFC8;
-    white-space: pre-wrap;
-    box-shadow: inset 0 0 8px #0f0f0f;
+  }
+  #outputTable th, #outputTable td {
+    border: 1px solid #444;
+    padding: 6px 10px;
+    text-align: center;
+  }
+  #outputTable th {
+    background-color: #333;
+    font-weight: 700;
+  }
+  /* Highlight the threshold row */
+  #outputTable tr.highlight {
+    background-color: #4CAF50;
+    color: #121212;
+    font-weight: 700;
+  }
+  /* Scroll container for table */
+  #outputWrapper {
+    max-height: 420px;
+    margin-top: 30px;
+    margin-bottom: 100px;
+    overflow-y: auto;
+    width: 90vw;
+    max-width: 1000px;
+    border-radius: 10px;
+    background: #222;
+    /* box-shadow: inset 0 0 8px #0f0f0f; */
   }
 
   /* Responsive adjustments */
@@ -135,7 +142,6 @@
     Number of Inspire Awards:
     <input type="number" id="inspires" value="3" min="0" max="10" />
   </label>
-  <!-- Removed input for awards -->
   <label>
     Number of Advancement Slots:
     <input type="number" id="slots" value="4" min="1" max="100" />
@@ -144,7 +150,27 @@
   <button id="calculate">Calculate</button>
 </div>
 
-<pre id="output">Input your competition's parameters and press "Calculate" to see the minimum advancement points you'll need to guarantee qualification.</pre>
+<div id="outputHeader" style="color: #C8FFC8; margin-top: 20px; font-family: 'Courier New', monospace; white-space: pre-wrap; text-align: center;">
+  Input your competition's parameters and press "Calculate" to see the minimum advancement points you'll need to guarantee qualification.
+</div>
+
+<div id="outputWrapper">
+  <table id="outputTable">
+    <thead>
+      <tr>
+        <th>Team (Rank - Qualifying Pts)</th>
+        <th>Alliance Seed (Seed - Pts)</th>
+        <th>Alliance Placement (Place - Pts)</th>
+        <th>Inspire (Pts)</th>
+        <th>Award (Pts)</th>
+        <th>Total</th>
+      </tr>
+    </thead>
+    <tbody id="outputBody">
+      <tr><td colspan="6">No data yet.</td></tr>
+    </tbody>
+  </table>
+</div>
 
 <script>
 // Award points constant - always 7 each of 12, 6, 3 points
@@ -194,16 +220,23 @@ async function worstCaseMinPointsSampling(teams, number_of_alliances, num_inspir
   for (let a = 1; a <= number_of_alliances; a++) seed_pts.push(21 - a);
   const place_pts = base_place_pts.slice(0, number_of_alliances);
   while (place_pts.length < number_of_alliances) place_pts.push(0);
+  
+  // Separate seed and placement points for alliances
+  // alliance_bonus_per_alliance will now store objects {seed, seedPts, place, placePts}
   const alliance_bonus_per_alliance = [];
   for (let i = 0; i < number_of_alliances; i++) {
-    alliance_bonus_per_alliance.push(seed_pts[i] + place_pts[i]);
+    alliance_bonus_per_alliance.push({
+      seed: i + 1,
+      seedPts: seed_pts[i],
+      place: i < 4 ? i + 1 : 0,  // Place only 1-4, else 0
+      placePts: place_pts[i]
+    });
   }
+  
   const alliance_teams_count = 2 * number_of_alliances;
   const alliance_team_indices = Array.from({length: alliance_teams_count}, (_, i) => i);
   const all_team_indices = Array.from({length: teams}, (_, i) => i);
   const inspire_points = [60, 30, 15].slice(0, num_inspire);
-  
-  // Always use all 21 awards (7 each of 12,6,3)
   const award_points = AWARD_POINTS_ALL;
 
   let max_threshold = 0;
@@ -229,10 +262,15 @@ async function worstCaseMinPointsSampling(teams, number_of_alliances, num_inspir
 
     for (let i = 0; i < teams; i++) {
       const base = base_scores[i];
-      let alliance_bonus = 0;
+      let alliance_seed = 0, alliance_seed_pts = 0;
+      let alliance_place = 0, alliance_place_pts = 0;
       if (alliance_team_indices.includes(i)) {
         const alliance_index = Math.floor(i / 2);
-        alliance_bonus = alliance_bonus_per_alliance[alliance_index];
+        const bonus = alliance_bonus_per_alliance[alliance_index];
+        alliance_seed = bonus.seed;
+        alliance_seed_pts = bonus.seedPts;
+        alliance_place = bonus.place;
+        alliance_place_pts = bonus.placePts;
       }
       let inspire_bonus = 0;
       if (inspire_assignment.includes(i)) {
@@ -244,8 +282,18 @@ async function worstCaseMinPointsSampling(teams, number_of_alliances, num_inspir
         invalid = true;
         break;
       }
-      const total = base + alliance_bonus + inspire_bonus + award_bonus;
-      scores_detail.push({team: i + 1, base, alliance_bonus, inspire_bonus, award_bonus, total});
+      const total = base + alliance_seed_pts + alliance_place_pts + inspire_bonus + award_bonus;
+      scores_detail.push({
+        team: i + 1,
+        base,
+        alliance_seed,
+        alliance_seed_pts,
+        alliance_place,
+        alliance_place_pts,
+        inspire_bonus,
+        award_bonus,
+        total
+      });
     }
     if (invalid) continue;
 
@@ -267,18 +315,51 @@ async function worstCaseMinPointsSampling(teams, number_of_alliances, num_inspir
 }
 
 function formatOutput(scores_detail, threshold, iterations=0) {
-  let out = `Worst case min points to guarantee slot:\nThreshold: ${threshold}\n\n`;
-  out += `Team | BasePts | Alliance | Inspire | Award | Total\n`;
-  out += '--------------------------------------------------\n';
-  for (const d of scores_detail) {
-    out += `${d.team.toString().padStart(4)} | `
-      + `${d.base.toString().padStart(7)} | `
-      + `${d.alliance_bonus.toString().padStart(8)} | `
-      + `${d.inspire_bonus.toString().padStart(7)} | `
-      + `${d.award_bonus.toString().padStart(5)} | `
-      + `${d.total.toString().padStart(5)}\n`;
-  }
-  return out;
+  const tbody = document.getElementById('outputBody');
+  tbody.innerHTML = '';
+
+  scores_detail.forEach((d, index) => {
+    const tr = document.createElement('tr');
+    if (index === scores_detail.findIndex(t => t.total === threshold)) {
+      tr.classList.add('highlight');
+    }
+    // Team (team number - base points)
+    const teamCell = document.createElement('td');
+    teamCell.textContent = `${d.team} - ${d.base}`;
+
+    // Alliance Seed (seed - pts)
+    const seedCell = document.createElement('td');
+    seedCell.textContent = d.alliance_seed > 0 ? `${d.alliance_seed} - ${d.alliance_seed_pts}` : '-';
+
+    // Alliance Placement (place - pts)
+    const placeCell = document.createElement('td');
+    placeCell.textContent = d.alliance_place > 0 ? `${d.alliance_place} - ${d.alliance_place_pts}` : '-';
+
+    // Inspire (pts)
+    const inspireCell = document.createElement('td');
+    inspireCell.textContent = d.inspire_bonus > 0 ? d.inspire_bonus : '-';
+
+    // Award (pts)
+    const awardCell = document.createElement('td');
+    awardCell.textContent = d.award_bonus > 0 ? d.award_bonus : '-';
+
+    // Total
+    const totalCell = document.createElement('td');
+    totalCell.textContent = d.total;
+
+    tr.appendChild(teamCell);
+    tr.appendChild(seedCell);
+    tr.appendChild(placeCell);
+    tr.appendChild(inspireCell);
+    tr.appendChild(awardCell);
+    tr.appendChild(totalCell);
+
+    tbody.appendChild(tr);
+  });
+
+  // Add header info above table
+  const headerInfo = `Worst case min points to guarantee slot:\nThreshold: ${threshold}`;
+  return headerInfo;
 }
 
 const stopFlag = { stopped: false };
@@ -289,21 +370,24 @@ document.getElementById('calculate').onclick = async () => {
   const alliances = +document.getElementById('alliances').value;
   const inspires = +document.getElementById('inspires').value;
   const slots = +document.getElementById('slots').value;
-  const output = document.getElementById('output');
+  const outputHeader = document.getElementById('outputHeader');
+
+  outputHeader.textContent = "Starting calculation...";
 
   try {
     await worstCaseMinPointsSampling(teams, alliances, inspires, slots, (scores, threshold, iterations) => {
-      output.textContent = formatOutput(scores, threshold, iterations);
+      const headerInfo = `Worst case min points to guarantee slot:\nThreshold: ${threshold}`;
+      formatOutput(scores, threshold, iterations);
+      outputHeader.textContent = headerInfo;
     }, stopFlag);
-    if (!stopFlag.stopped) output.textContent += "\n\nCalculation complete.";
+    if (!stopFlag.stopped) {
+      outputHeader.textContent += "\nCalculation complete.";
+    }
   } catch (e) {
-    output.textContent = "Error: " + e.message;
+    outputHeader.textContent = "Error: " + e.message;
   }
 };
 
-document.getElementById('stop').onclick = () => {
-  stopFlag.stopped = true;
-};
 </script>
 
 </body>
