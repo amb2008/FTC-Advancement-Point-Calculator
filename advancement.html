@@ -336,7 +336,11 @@ async function worstCaseMinPointsSampling(teams, number_of_alliances, num_inspir
     if (invalid) continue;
 
     scores_detail.sort((a,b) => b.total - a.total);
-    const threshold = scores_detail[slots - 1].total;
+
+    const lastQualifyingScore = scores_detail[slots - 1].total;
+    const firstNonQualifyingScore = scores_detail[slots]?.total || 0; // safe if slots == total teams
+    const threshold = firstNonQualifyingScore + 1;
+
 
     if (threshold > max_threshold) {
       max_threshold = threshold;
@@ -359,7 +363,7 @@ function formatOutput(scores_detail, threshold, iterations=0) {
 
   scores_detail.forEach((d, index) => {
     const tr = document.createElement('tr');
-    if (index === scores_detail.findIndex(t => t.total === threshold)) {
+    if (index == document.getElementById('slots').value-1) {
       tr.classList.add('highlight');
     }
     // Team (team number - base points)
@@ -397,7 +401,7 @@ function formatOutput(scores_detail, threshold, iterations=0) {
   });
 
   // Add header info above table
-  const headerInfo = `Worst case min points to guarantee slot:\nThreshold: ${threshold}`;
+  const headerInfo = `Minimum points to guarantee slot in worst case:\n${threshold}`;
   return headerInfo;
 }
 
@@ -415,7 +419,7 @@ document.getElementById('calculate').onclick = async () => {
 
   try {
     await worstCaseMinPointsSampling(teams, alliances, inspires, slots, (scores, threshold, iterations) => {
-      const headerInfo = `Worst case min points to guarantee slot:\nThreshold: ${threshold}`;
+      const headerInfo = `Minimum points to guarantee advancment in worst case:\n${threshold}`;
       formatOutput(scores, threshold, iterations);
       outputHeader.textContent = headerInfo;
     }, stopFlag);
