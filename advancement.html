@@ -221,18 +221,6 @@ async function worstCaseMinPointsSampling(teams, number_of_alliances, num_inspir
   const place_pts = base_place_pts.slice(0, number_of_alliances);
   while (place_pts.length < number_of_alliances) place_pts.push(0);
   
-  // Separate seed and placement points for alliances
-  // alliance_bonus_per_alliance will now store objects {seed, seedPts, place, placePts}
-  const alliance_bonus_per_alliance = [];
-  for (let i = 0; i < number_of_alliances; i++) {
-    alliance_bonus_per_alliance.push({
-      seed: i + 1,
-      seedPts: seed_pts[i],
-      place: i < 4 ? i + 1 : 0,  // Place only 1-4, else 0
-      placePts: place_pts[i]
-    });
-  }
-  
   const alliance_teams_count = 2 * number_of_alliances;
   const alliance_team_indices = Array.from({length: alliance_teams_count}, (_, i) => i);
   const all_team_indices = Array.from({length: teams}, (_, i) => i);
@@ -245,18 +233,68 @@ async function worstCaseMinPointsSampling(teams, number_of_alliances, num_inspir
 
   while (!stopFlag.stopped) {
     iterations++;
+
+    // Shuffle all teams for Inspire and awards
     let shuffledTeams = shuffleArray([...all_team_indices]);
     let inspire_assignment = shuffledTeams.slice(0, num_inspire);
-    let remaining_for_award = shuffledTeams.slice(num_inspire);
-    remaining_for_award = shuffleArray(remaining_for_award);
-    let award_assignment = remaining_for_award.slice(0, award_points.length);
-    let award_perm = shuffleArray([...award_points]);
 
-    const team_to_award = {};
-    for (let i = 0; i < award_assignment.length; i++) {
-      team_to_award[award_assignment[i]] = award_perm[i];
+    // Generate random placement order independent of seed
+    let alliance_placements = Array.from({length: number_of_alliances}, (_, i) => i + 1);
+    alliance_placements = shuffleArray(alliance_placements); // Shuffled placements
+
+    // Build alliance bonus objects with seed and shuffled placement info
+    const alliance_bonus_per_alliance = [];
+    for (let i = 0; i < number_of_alliances; i++) {
+      alliance_bonus_per_alliance.push({
+        seed: i + 1,
+        seedPts: seed_pts[i],
+        place: alliance_placements[i],        // Placement is from shuffled list
+        placePts: alliance_placements[i] <= 4 ? place_pts[alliance_placements[i] - 1] : 0
+      });
     }
 
+    // Teams eligible for awards = not Inspire winners
+    let eligible_for_awards = all_team_indices.filter(i => !inspire_assignment.includes(i));
+
+    // Calculate base + alliance points (seed + placement) for eligible teams, to assign 12pt awards
+    const scoresWithoutAward = [];
+    for (let i = 0; i < teams; i++) {
+      const base = base_scores[i];
+      let alliance_seed_pts = 0;
+      let alliance_place_pts = 0;
+      if (alliance_team_indices.includes(i)) {
+        const alliance_index = Math.floor(i / 2);
+        const bonus = alliance_bonus_per_alliance[alliance_index];
+        alliance_seed_pts = bonus.seedPts;
+        alliance_place_pts = bonus.placePts;
+      }
+      scoresWithoutAward.push({team: i, score: base + alliance_seed_pts + alliance_place_pts});
+    }
+
+    // Sort eligible teams descending by base+alliance points to assign 12pt awards
+    let teamsNoInspireSorted = scoresWithoutAward
+      .filter(t => eligible_for_awards.includes(t.team))
+      .sort((a, b) => b.score - a.score);
+
+    // Assign 12-point awards to top 7 teams (or fewer if less eligible)
+    const num12Awards = 7;
+    let award12Teams = teamsNoInspireSorted.slice(0, num12Awards).map(t => t.team);
+
+    // Remaining teams for 6 and 3 point awards
+    let remainingTeamsForAwards = teamsNoInspireSorted.slice(num12Awards).map(t => t.team);
+    remainingTeamsForAwards = shuffleArray(remainingTeamsForAwards);
+
+    // Assign awards
+    const team_to_award = {};
+    award12Teams.forEach(teamIdx => { team_to_award[teamIdx] = 12; });
+    for (let i = 0; i < 7 && i < remainingTeamsForAwards.length; i++) {
+      team_to_award[remainingTeamsForAwards[i]] = 6;
+    }
+    for (let i = 7; i < 14 && i < remainingTeamsForAwards.length; i++) {
+      team_to_award[remainingTeamsForAwards[i]] = 3;
+    }
+
+    // Compute total scores with all bonuses
     let invalid = false;
     const scores_detail = [];
 
@@ -313,6 +351,7 @@ async function worstCaseMinPointsSampling(teams, number_of_alliances, num_inspir
 
   return max_threshold;
 }
+
 
 function formatOutput(scores_detail, threshold, iterations=0) {
   const tbody = document.getElementById('outputBody');
