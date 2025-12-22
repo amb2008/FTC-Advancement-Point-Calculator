@@ -38,7 +38,7 @@
     color: #BBBBBB;
   }
 
-  input[type=number] {
+  input {
     width: 90px;
     background: #2A2A2A;
     border: 1.5px solid #555;
@@ -48,7 +48,7 @@
     text-align: right;
     transition: border-color 0.2s ease;
   }
-  input[type=number]:focus {
+  input:focus {
     outline: none;
     border-color: #4CAF50;
     background: #333;
@@ -130,6 +130,46 @@
     background:#333;
   }
 
+  #topbar {
+  width: 100%;
+  max-width: 1100px;
+  padding: 20px 30px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+#topbar h1 {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #E0E0E0;
+}
+
+/* Navigation buttons */
+#nav {
+  display: flex;
+  gap: 12px;
+}
+
+#nav a{
+  padding: 8px 16px;
+  font-weight: 700;
+  font-size: 14px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  color: #E0E0E0;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+#nav a:hover {
+  color: #7be27d;
+}
+
+
+
 
   /* Responsive adjustments */
   @media (max-width: 450px) {
@@ -137,39 +177,45 @@
       width: 90vw;
       padding: 20px;
     }
-    input[type=number] {
+    input{
       width: 70px;
     }
   }
 </style>
 </head>
 <body>
+<header id="topbar">
+  <h1><a href="index.html" style="text-decoration: none; color: white;">FTC Advancement Points Calculator</a></h1>
 
-<h1>FTC Advancement Points Calculator</h1>
+  <nav id="nav">
+    <a href="index.html">Guaranteed Advancement Calculator</a>
+    <a href="calculator.html">Points Calculator</a>
+  </nav>
+</header>
 
 <div id="container">
   <label>
     Number of Teams:
-    <input type="number" id="teams" value="16" min="1" max="100" />
+    <input type="text" inputmode="numeric" id="teams" value="16" min="1" max="100"  />
   </label>
   <label>
     Number of Alliances In Playoffs:
-    <input type="number" id="alliances" value="4" min="1" max="20" />
+    <input type="text" inputmode="numeric" id="alliances" value="4" min="1" max="20" />
   </label>
   <label>
     Number of Inspire Awards:
-    <input type="number" id="inspires" value="3" min="0" max="10" />
+    <input type="text" inputmode="numeric" id="inspires" value="3" min="0" max="10" />
   </label>
   <label>
     Number of Advancement Slots:
-    <input type="number" id="slots" value="4" min="1" max="100" />
+    <input type="text" inputmode="numeric" id="slots" value="4" min="1" max="100" />
   </label>
 
   <button id="calculate">Calculate</button>
 </div>
 
-<div id="outputHeader" style="color: #C8FFC8; margin-top: 20px; font-family: 'Courier New', monospace; white-space: pre-wrap; text-align: center;">
-  Input your competition's parameters and press "Calculate" to see the minimum advancement points you'll need to guarantee qualification.
+<div id="outputHeader" style="margin-top: 20px; color: #C8FFC8; font-family: 'Courier New', monospace; white-space: pre-wrap; text-align: center; font-size: large; width: 30%;">
+  Calculate the minimum number of advancement points to guarantee qualification
 </div>
 
 <div id="outputWrapper">
@@ -190,7 +236,9 @@
   </table>
 </div>
 
-<h2 style="margin-top:40px;color:#C8FFC8;">Ways to Reach Threshold Score</h2>
+<div id="outputHeader" style="margin-bottom: 20px; color: #C8FFC8; font-family: 'Courier New', monospace; white-space: pre-wrap; text-align: center; font-size: large; width: 30%;">
+  Ways to Reach Threshold Score
+</div>
 
 <div id="pathsWrapper">
   <table id="pathsTable">

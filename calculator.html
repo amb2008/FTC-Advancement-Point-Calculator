@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FTC Points Calculator</title>
+
+<style>
+body {
+  background:#121212;
+  color:#E0E0E0;
+  font-family:Segoe UI, sans-serif;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  margin:0;
+}
+
+h1 {
+  margin-top:30px;
+}
+
+#container {
+  background:#1E1E1E;
+  padding:25px 30px;
+  border-radius:10px;
+  width:360px;
+  margin-top:20px;
+}
+
+label {
+  display:flex;
+  justify-content:space-between;
+  margin-bottom:14px;
+}
+
+input{
+    width: 90px;
+    background: #2A2A2A;
+    border: 1.5px solid #555;
+    border-radius: 6px;
+    color: #eee;
+    font-size: 16px;
+    text-align: right;
+    transition: border-color 0.2s ease;
+  }
+  input:focus {
+    outline: none;
+    border-color: #4CAF50;
+    background: #333;
+  }
+
+  button {
+    width: 100%;
+    padding: 12px 0;
+    margin-top: 18px;
+    font-weight: 700;
+    font-size: 16px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    background-color: #4CAF50;
+    color: #121212;
+  }
+
+table {
+  border-collapse:collapse;
+  margin-top:30px;
+  width:360px;
+  font-family:Courier New, monospace;
+}
+
+th, td {
+  border:1px solid #444;
+  padding:8px;
+  text-align:center;
+}
+
+th {
+  background:#333;
+}
+
+.total {
+  background:#4CAF50;
+  color:#121212;
+  font-weight:bold;
+}
+
+#topbar {
+  width: 100%;
+  max-width: 1100px;
+  padding: 20px 30px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+#topbar h1 {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #E0E0E0;
+}
+
+/* Navigation buttons */
+#nav {
+  display: flex;
+  gap: 12px;
+}
+
+#nav a{
+  padding: 8px 16px;
+  font-weight: 700;
+  font-size: 14px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  color: #E0E0E0;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+#nav a:hover {
+  color: #7be27d;
+}
+</style>
+</head>
+
+<body>
+
+<header id="topbar">
+  <h1><a href="index.html" style="text-decoration: none; color: white;">FTC Advancement Points Calculator</a></h1>
+
+  <nav id="nav">
+    <a href="index.html">Guaranteed Advancement Calculator</a>
+    <a href="calculator.html">Points Calculator</a>
+  </nav>
+</header>
+
+<div id="container">
+  <label>Total Teams <input id="teams" type="text" inputmode="numeric" value="16" min="1"></label>
+  <label>Your Rank <input id="rank" type="text" inputmode="numeric" value="5" min="1"></label>
+  <label>Alliance Seed (0 if none) <input id="seed" type="text" inputmode="numeric" value="0" min="0"></label>
+  <label>Alliance Placement (0–6) <input id="place" type="text" inputmode="numeric" value="0" min="0" max="4"></label>
+  <label>Inspire Place (0–3) <input id="inspire" type="text" inputmode="numeric" value="0" min="0" max="3"></label>
+  <label>Award Place (0–3) <input id="award" type="text" inputmode="numeric" value="0" min="0" max="3"></label>
+
+  <button onclick="calculate()">Calculate Points</button>
+</div>
+
+<table>
+<thead>
+<tr><th>Component</th><th>Points</th></tr>
+</thead>
+<tbody id="output">
+<tr><td colspan="2">Enter values and calculate</td></tr>
+</tbody>
+</table>
+
+<script>
+// Inverse error function
+function erfinv(x) {
+  const a = 0.147;
+  const ln = Math.log(1 - x*x);
+  const first = 2/(Math.PI*a) + ln/2;
+  const second = ln/a;
+  return Math.sign(x) * Math.sqrt(Math.sqrt(first*first - second) - first);
+}
+
+// FTC point calculation
+function baseRankPoints(teams, rank) {
+  const val = (teams - 2*rank + 2) / (1.07 * teams);
+  return Math.floor(erfinv(val) * (7 / erfinv(1/1.07)) + 9.5);
+}
+
+function calculate() {
+  const teams = +document.getElementById("teams").value;
+  const rank = +document.getElementById("rank").value;
+  const seed = +document.getElementById("seed").value;
+  let place = +document.getElementById("place").value;
+  let inspire = +document.getElementById("inspire").value;
+  let award = +document.getElementById("award").value;
+
+  if (place > 4){
+    place = 0;
+  }
+  if (inspire > 3){
+    inspire = 0;
+  }
+  if (award > 3){
+    award = 0;
+  }
+
+  const base = baseRankPoints(teams, rank);
+  const seedPts = seed > 0 ? 21 - seed : 0;
+  const placePts = [0, 40, 20, 10, 5][place];
+  const inspirePts = [0, 60, 30, 15][inspire];
+  const awardPts = [0, 12, 6, 3][award];
+
+  const total = base + seedPts + placePts + inspirePts + awardPts;
+
+  document.getElementById("output").innerHTML = `
+    <tr><td>Base Rank</td><td>${base}</td></tr>
+    <tr><td>Alliance Seed</td><td>${seedPts}</td></tr>
+    <tr><td>Alliance Placement</td><td>${placePts}</td></tr>
+    <tr><td>Inspire Award</td><td>${inspirePts}</td></tr>
+    <tr><td>Other Award</td><td>${awardPts}</td></tr>
+    <tr class="total"><td>Total Points</td><td>${total}</td></tr>
+  `;
+}
+</script>
+
+</body>
+</html>
