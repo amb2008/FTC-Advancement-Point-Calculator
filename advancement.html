@@ -338,8 +338,22 @@ async function worstCaseMinPointsSampling(teams, number_of_alliances, num_inspir
     scores_detail.sort((a,b) => b.total - a.total);
 
     const lastQualifyingScore = scores_detail[slots - 1].total;
-    const firstNonQualifyingScore = scores_detail[slots]?.total || 0; // safe if slots == total teams
+    const firstNonQualifyingScore = scores_detail[slots]?.total || 0;
     const threshold = firstNonQualifyingScore + 1;
+
+    // Only accept this scenario if the last qualifying team matches threshold
+    // and the next team matches threshold - 1
+    if (lastQualifyingScore === threshold && firstNonQualifyingScore === threshold - 1) {
+      if (threshold > max_threshold) {
+        max_threshold = threshold;
+        best_scores_detail = scores_detail;
+        outputFunc(best_scores_detail, max_threshold, iterations);
+      }
+    } else {
+      // Ignore this iteration, continue searching for better scenario
+      continue;
+    }
+
 
 
     if (threshold > max_threshold) {
@@ -361,11 +375,28 @@ function formatOutput(scores_detail, threshold, iterations=0) {
   const tbody = document.getElementById('outputBody');
   tbody.innerHTML = '';
 
+  const slots = +document.getElementById('slots').value;
+
+  // Check if we have a next team after the last qualifier
+  const hasNextTeam = scores_detail.length > slots;
+
+  // Check actual totals for last qualifier and next team
+  const lastQualTotal = scores_detail[slots - 1]?.total;
+  const nextTeamTotal = hasNextTeam ? scores_detail[slots].total : null;
+
+  // Determine if we can override totals for display
+  const showForcedTotals = 
+    lastQualTotal === threshold &&
+    nextTeamTotal === threshold - 1;
+
   scores_detail.forEach((d, index) => {
     const tr = document.createElement('tr');
-    if (index == document.getElementById('slots').value-1) {
+
+    // Highlight the last qualifying slot row
+    if (index === slots - 1) {
       tr.classList.add('highlight');
     }
+
     // Team (team number - base points)
     const teamCell = document.createElement('td');
     teamCell.textContent = `${d.team} - ${d.base}`;
@@ -388,7 +419,18 @@ function formatOutput(scores_detail, threshold, iterations=0) {
 
     // Total
     const totalCell = document.createElement('td');
-    totalCell.textContent = d.total;
+
+    if (showForcedTotals) {
+      if (index === slots - 1) {
+        totalCell.textContent = threshold;
+      } else if (index === slots) {
+        totalCell.textContent = threshold - 1;
+      } else {
+        totalCell.textContent = d.total;
+      }
+    } else {
+      totalCell.textContent = d.total;
+    }
 
     tr.appendChild(teamCell);
     tr.appendChild(seedCell);
@@ -401,9 +443,11 @@ function formatOutput(scores_detail, threshold, iterations=0) {
   });
 
   // Add header info above table
-  const headerInfo = `Minimum points to guarantee slot in worst case:\n${threshold}`;
+  const headerInfo = `Minimum points to guarantee advancement in worst case:\n${threshold}`;
   return headerInfo;
 }
+
+
 
 const stopFlag = { stopped: false };
 
@@ -427,7 +471,7 @@ document.getElementById('calculate').onclick = async () => {
       outputHeader.textContent += "\nCalculation complete.";
     }
   } catch (e) {
-    outputHeader.textContent = "Error: " + e.message;
+    outputHeader.textContent = "Error: Ensure that your parameters are valid. No more than 3 Inspire awards can be given, and there must be more teams than advancement slots and alliances.";
   }
 };
 
