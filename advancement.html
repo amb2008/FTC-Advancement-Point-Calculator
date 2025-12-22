@@ -102,7 +102,7 @@
   }
   /* Scroll container for table */
   #outputWrapper {
-    max-height: 420px;
+    /* max-height: 420px; */
     margin-top: 30px;
     margin-bottom: 100px;
     overflow-y: auto;
@@ -209,6 +209,32 @@ function shuffleArray(array) {
   }
   return array;
 }
+
+function generateAlliances(teams, number_of_alliances) {
+  const assigned = new Set();
+  const alliances = [];
+
+  // All teams sorted by base rank ascending (0-based)
+  const sortedTeams = [...Array(teams).keys()];
+
+  for (let i = 0; i < number_of_alliances; i++) {
+    // Find next captain: lowest-ranked team not yet assigned
+    const captain = sortedTeams.find(t => !assigned.has(t));
+    assigned.add(captain);
+
+    // Find possible partners: all teams not assigned
+    const partners = sortedTeams.filter(t => !assigned.has(t));
+
+    // Randomly pick a partner
+    const partner = partners[Math.floor(Math.random() * partners.length)];
+    assigned.add(partner);
+
+    alliances.push([captain, partner]);
+  }
+
+  return alliances; // array of [captain, partner]
+}
+
 
 async function worstCaseMinPointsSampling(teams, number_of_alliances, num_inspire, slots, outputFunc, stopFlag) {
   const base_place_pts = [40, 20, 10, 5];
