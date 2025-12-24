@@ -36,6 +36,8 @@
     border-radius: 10px;
     margin-top: 20px;
     width: 380px;
+    max-width: 90vw;
+    box-sizing: border-box;
     box-shadow: 0 0 15px rgba(0,0,0,0.8);
   }
 
@@ -114,6 +116,7 @@
     max-height: 420px;
     margin-top: 30px;
     overflow-y: auto;
+    overflow-x: auto;
     width: 90vw;
     max-width: 1000px;
     border-radius: 10px;
@@ -127,6 +130,13 @@
   border-collapse:collapse;
   margin-bottom:60px;
   font-family:Courier New, monospace;
+  }
+
+  #pathsWrapper {
+    overflow-x: auto;
+    width: 90vw;
+    max-width: 900px;
+    margin-top: 10px;
   }
 
   #pathsTable th, #pathsTable td {
@@ -181,13 +191,54 @@
 
 
   /* Responsive adjustments */
-  @media (max-width: 450px) {
+  @media (max-width: 600px) {
+    #topbar {
+      flex-direction: column;
+      padding: 15px;
+      gap: 15px;
+    }
+    #topbar h1 {
+      font-size: 20px;
+      text-align: center;
+    }
+    #nav {
+      flex-direction: column;
+      width: 100%;
+      gap: 8px;
+    }
+    #nav a {
+      text-align: center;
+      padding: 10px;
+      font-size: 13px;
+    }
     #container {
       width: 90vw;
       padding: 20px;
+      box-sizing: border-box;
     }
-    input{
+    input {
       width: 70px;
+    }
+    #outputWrapper {
+      width: 95vw;
+    }
+    #outputTable {
+      width: 100%;
+      font-size: 11px;
+    }
+    #outputTable th, #outputTable td {
+      padding: 4px 3px;
+    }
+    #pathsTable {
+      width: 95vw;
+      font-size: 11px;
+    }
+    #pathsTable th, #pathsTable td {
+      padding: 4px 3px;
+    }
+    div[id="outputHeader"] {
+      width: 90% !important;
+      font-size: medium !important;
     }
   }
 </style>
