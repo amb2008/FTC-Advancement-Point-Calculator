@@ -413,6 +413,14 @@
       <option value="">Any</option>
     </select>
   </div>
+  <div class="filter-group">
+    <label for="filterCustomThreshold">Custom Threshold</label>
+    <input type="number"
+           id="filterCustomThreshold"
+           placeholder="auto"
+           min="0"
+           step="1">
+  </div>
   <button id="clearFilters">Clear Filters</button>
   <div id="pathsCount"></div>
 </div>
@@ -797,6 +805,7 @@ function computeWaysToReachThreshold(threshold, teams, alliances, inspires) {
     }
   }
 
+  results.sort((a, b) => a.total - b.total);
   // Store results globally and update parameters
   allPathsResults = results;
   currentPathsParams = { threshold, teams, alliances, inspires };
@@ -940,7 +949,21 @@ document.getElementById("filterPlace").addEventListener("change", applyFilters);
 document.getElementById("filterInspire").addEventListener("change", applyFilters);
 document.getElementById("filterAward").addEventListener("change", applyFilters);
 document.getElementById("clearFilters").addEventListener("click", clearFilters);
+document.getElementById("filterCustomThreshold").addEventListener("change", calculateWaysWithCustomThreshold);
 
+function calculateWaysWithCustomThreshold() {
+  const customThresholdInput = document.getElementById("filterCustomThreshold").value;
+  let threshold = parseInt(customThresholdInput);
+  if (isNaN(threshold) || threshold <= 0) {
+    threshold = currentPathsParams.threshold;
+  }
+  computeWaysToReachThreshold(
+    threshold,
+    currentPathsParams.teams,
+    currentPathsParams.alliances,
+    currentPathsParams.inspires
+  );
+}
 
 const stopFlag = { stopped: false };
 
