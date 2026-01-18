@@ -149,6 +149,79 @@
     background:#333;
   }
 
+  /* Filter controls styling */
+  #pathsFilters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-bottom: 15px;
+    padding: 15px;
+    background: #1E1E1E;
+    border-radius: 8px;
+    width: 90vw;
+    max-width: 900px;
+    box-sizing: border-box;
+  }
+
+  .filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .filter-group label {
+    font-size: 12px;
+    color: #BBBBBB;
+    margin-bottom: 0;
+    font-weight: 600;
+  }
+
+  .filter-group select {
+    background: #2A2A2A;
+    border: 1.5px solid #555;
+    border-radius: 6px;
+    color: #eee;
+    font-size: 14px;
+    padding: 6px 10px;
+    min-width: 120px;
+    cursor: pointer;
+    transition: border-color 0.2s ease;
+  }
+
+  .filter-group select:focus {
+    outline: none;
+    border-color: #4CAF50;
+    background: #333;
+  }
+
+  .filter-group select:hover {
+    border-color: #666;
+  }
+
+  #clearFilters {
+    align-self: flex-end;
+    padding: 6px 12px;
+    background: #333;
+    border: 1.5px solid #555;
+    border-radius: 6px;
+    color: #eee;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+  }
+
+  #clearFilters:hover {
+    background: #444;
+    border-color: #666;
+  }
+
+  #pathsCount {
+    color: #888;
+    font-size: 12px;
+    margin-top: 5px;
+    width: 100%;
+  }
+
   #topbar {
   width: 100%;
   max-width: 1100px;
@@ -240,6 +313,15 @@
       width: 90% !important;
       font-size: medium !important;
     }
+    #pathsFilters {
+      width: 95vw;
+      padding: 10px;
+      gap: 10px;
+    }
+    .filter-group select {
+      min-width: 100px;
+      font-size: 13px;
+    }
   }
 </style>
 </head>
@@ -297,7 +379,42 @@
 </div>
 
 <div id="outputHeader" style="margin-bottom: 20px; color: #C8FFC8; font-family: 'Courier New', monospace; white-space: pre-wrap; text-align: center; font-size: large; width: 30%;">
-  Ways to Reach Threshold Score
+  Ways to Reach or Exceed Threshold Score
+</div>
+
+<div id="pathsFilters">
+  <div class="filter-group">
+    <label for="filterRank">Rank</label>
+    <select id="filterRank">
+      <option value="">Any</option>
+    </select>
+  </div>
+  <div class="filter-group">
+    <label for="filterSeed">Alliance Seed</label>
+    <select id="filterSeed">
+      <option value="">Any</option>
+    </select>
+  </div>
+  <div class="filter-group">
+    <label for="filterPlace">Placement</label>
+    <select id="filterPlace">
+      <option value="">Any</option>
+    </select>
+  </div>
+  <div class="filter-group">
+    <label for="filterInspire">Inspire</label>
+    <select id="filterInspire">
+      <option value="">Any</option>
+    </select>
+  </div>
+  <div class="filter-group">
+    <label for="filterAward">Award</label>
+    <select id="filterAward">
+      <option value="">Any</option>
+    </select>
+  </div>
+  <button id="clearFilters">Clear Filters</button>
+  <div id="pathsCount"></div>
 </div>
 
 <div id="pathsWrapper">
@@ -322,6 +439,10 @@
 <script>
 // Award points constant - always 7 each of 12, 6, 3 points
 const AWARD_POINTS_ALL = Array(7).fill(12).concat(Array(7).fill(6)).concat(Array(7).fill(3));
+
+// Global storage for paths results and current parameters
+let allPathsResults = [];
+let currentPathsParams = { threshold: 0, teams: 0, alliances: 0, inspires: 0 };
 
 // erfinv function
 function erfinv(x) {
@@ -655,12 +776,17 @@ function computeWaysToReachThreshold(threshold, teams, alliances, inspires) {
             if (insp > 0 && aw > 0) continue;
 
             const total = b.base + s.pts + p.pts + insp + aw;
-            if (total === threshold) {
+            if (total >= threshold) {
               results.push({
+                rankNum: b.rank,
                 rank: `${b.rank} - ${b.base}pts`,
+                seedNum: s.seed,
                 seed: s.seed ? `${s.seed} - ${s.pts}pts` : "-",
+                placeNum: p.place,
                 place: p.place ? `${p.place} - ${p.pts}pts` : "-",
+                inspireNum: insp,
                 inspire: insp ? insp + "pts" : "-",
+                awardNum: aw,
                 award: aw ? aw + "pts" : "-",
                 total
               });
@@ -671,8 +797,115 @@ function computeWaysToReachThreshold(threshold, teams, alliances, inspires) {
     }
   }
 
+  // Store results globally and update parameters
+  allPathsResults = results;
+  currentPathsParams = { threshold, teams, alliances, inspires };
+
+  // Populate filter dropdowns
+  populateFilterOptions(results, teams, alliances, inspires);
+
+  // Render with no filters applied
+  renderFilteredPaths(results);
+}
+
+function populateFilterOptions(results, teams, alliances, inspires) {
+  // Reset all filters
+  const filterRank = document.getElementById("filterRank");
+  const filterSeed = document.getElementById("filterSeed");
+  const filterPlace = document.getElementById("filterPlace");
+  const filterInspire = document.getElementById("filterInspire");
+  const filterAward = document.getElementById("filterAward");
+
+  // Get unique values from results
+  const ranks = [...new Set(results.map(r => r.rankNum))].sort((a, b) => a - b);
+  const seeds = [...new Set(results.map(r => r.seedNum))].sort((a, b) => a - b);
+  const places = [...new Set(results.map(r => r.placeNum))].sort((a, b) => a - b);
+  const inspireVals = [...new Set(results.map(r => r.inspireNum))].sort((a, b) => b - a);
+  const awardVals = [...new Set(results.map(r => r.awardNum))].sort((a, b) => b - a);
+
+  // Populate rank filter
+  filterRank.innerHTML = '<option value="">Any</option>';
+  ranks.forEach(r => {
+    const opt = document.createElement("option");
+    opt.value = r;
+    opt.textContent = `Rank ${r}`;
+    filterRank.appendChild(opt);
+  });
+
+  // Populate seed filter
+  filterSeed.innerHTML = '<option value="">Any</option>';
+  seeds.forEach(s => {
+    const opt = document.createElement("option");
+    opt.value = s;
+    opt.textContent = s === 0 ? "None" : `Seed ${s}`;
+    filterSeed.appendChild(opt);
+  });
+
+  // Populate place filter
+  filterPlace.innerHTML = '<option value="">Any</option>';
+  places.forEach(p => {
+    const opt = document.createElement("option");
+    opt.value = p;
+    opt.textContent = p === 0 ? "None" : `Place ${p}`;
+    filterPlace.appendChild(opt);
+  });
+
+  // Populate inspire filter
+  filterInspire.innerHTML = '<option value="">Any</option>';
+  inspireVals.forEach(i => {
+    const opt = document.createElement("option");
+    opt.value = i;
+    opt.textContent = i === 0 ? "None" : `${i}pts`;
+    filterInspire.appendChild(opt);
+  });
+
+  // Populate award filter
+  filterAward.innerHTML = '<option value="">Any</option>';
+  awardVals.forEach(a => {
+    const opt = document.createElement("option");
+    opt.value = a;
+    opt.textContent = a === 0 ? "None" : `${a}pts`;
+    filterAward.appendChild(opt);
+  });
+}
+
+function applyFilters() {
+  const filterRank = document.getElementById("filterRank").value;
+  const filterSeed = document.getElementById("filterSeed").value;
+  const filterPlace = document.getElementById("filterPlace").value;
+  const filterInspire = document.getElementById("filterInspire").value;
+  const filterAward = document.getElementById("filterAward").value;
+
+  let filtered = allPathsResults;
+
+  if (filterRank !== "") {
+    filtered = filtered.filter(r => r.rankNum === parseInt(filterRank));
+  }
+  if (filterSeed !== "") {
+    filtered = filtered.filter(r => r.seedNum === parseInt(filterSeed));
+  }
+  if (filterPlace !== "") {
+    filtered = filtered.filter(r => r.placeNum === parseInt(filterPlace));
+  }
+  if (filterInspire !== "") {
+    filtered = filtered.filter(r => r.inspireNum === parseInt(filterInspire));
+  }
+  if (filterAward !== "") {
+    filtered = filtered.filter(r => r.awardNum === parseInt(filterAward));
+  }
+
+  renderFilteredPaths(filtered);
+}
+
+function renderFilteredPaths(results) {
+  const tbody = document.getElementById("pathsBody");
+  tbody.innerHTML = "";
+
+  const pathsCount = document.getElementById("pathsCount");
+
   if (results.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="6">No valid paths</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6">No matching paths</td></tr>`;
+    pathsCount.textContent = `Showing 0 of ${allPathsResults.length} paths`;
     return;
   }
 
@@ -687,7 +920,26 @@ function computeWaysToReachThreshold(threshold, teams, alliances, inspires) {
       <td>${r.total}</td>`;
     tbody.appendChild(tr);
   }
+
+  pathsCount.textContent = `Showing ${results.length} of ${allPathsResults.length} paths`;
 }
+
+function clearFilters() {
+  document.getElementById("filterRank").value = "";
+  document.getElementById("filterSeed").value = "";
+  document.getElementById("filterPlace").value = "";
+  document.getElementById("filterInspire").value = "";
+  document.getElementById("filterAward").value = "";
+  renderFilteredPaths(allPathsResults);
+}
+
+// Add event listeners for filters
+document.getElementById("filterRank").addEventListener("change", applyFilters);
+document.getElementById("filterSeed").addEventListener("change", applyFilters);
+document.getElementById("filterPlace").addEventListener("change", applyFilters);
+document.getElementById("filterInspire").addEventListener("change", applyFilters);
+document.getElementById("filterAward").addEventListener("change", applyFilters);
+document.getElementById("clearFilters").addEventListener("click", clearFilters);
 
 
 const stopFlag = { stopped: false };
