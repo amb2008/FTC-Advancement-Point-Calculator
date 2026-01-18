@@ -523,8 +523,16 @@ async function worstCaseMinPointsSampling(teams, number_of_alliances, num_inspir
   const place_pts = base_place_pts.slice(0, number_of_alliances);
   while (place_pts.length < number_of_alliances) place_pts.push(0);
   
-  const alliance_teams_count = 2 * number_of_alliances;
-  const alliance_team_indices = Array.from({length: alliance_teams_count}, (_, i) => i);
+  const alliances = generateAlliances(teams, number_of_alliances);
+  const teamToAlliance = new Map();
+
+  alliances.forEach((pair, idx) => {
+    const seed = idx + 1;
+    pair.forEach(teamIdx => {
+      teamToAlliance.set(teamIdx, seed);
+    });
+  });
+
   const all_team_indices = Array.from({length: teams}, (_, i) => i);
   const inspire_points = [60, 30, 15].slice(0, num_inspire);
   const award_points = AWARD_POINTS_ALL;
@@ -564,9 +572,9 @@ async function worstCaseMinPointsSampling(teams, number_of_alliances, num_inspir
       const base = base_scores[i];
       let alliance_seed_pts = 0;
       let alliance_place_pts = 0;
-      if (alliance_team_indices.includes(i)) {
-        const alliance_index = Math.floor(i / 2);
-        const bonus = alliance_bonus_per_alliance[alliance_index];
+      if (teamToAlliance.has(i)) {
+        const alliance_seed = teamToAlliance.get(i);
+        const bonus = alliance_bonus_per_alliance[alliance_seed - 1];
         alliance_seed_pts = bonus.seedPts;
         alliance_place_pts = bonus.placePts;
       }
@@ -604,14 +612,13 @@ async function worstCaseMinPointsSampling(teams, number_of_alliances, num_inspir
       const base = base_scores[i];
       let alliance_seed = 0, alliance_seed_pts = 0;
       let alliance_place = 0, alliance_place_pts = 0;
-      if (alliance_team_indices.includes(i)) {
-        const alliance_index = Math.floor(i / 2);
-        const bonus = alliance_bonus_per_alliance[alliance_index];
-        alliance_seed = bonus.seed;
+      if (teamToAlliance.has(i)) {
+        const alliance_seed = teamToAlliance.get(i);
+        const bonus = alliance_bonus_per_alliance[alliance_seed - 1];
         alliance_seed_pts = bonus.seedPts;
-        alliance_place = bonus.place;
         alliance_place_pts = bonus.placePts;
       }
+
       let inspire_bonus = 0;
       if (inspire_assignment.includes(i)) {
         const idx = inspire_assignment.indexOf(i);
@@ -776,6 +783,7 @@ function computeWaysToReachThreshold(threshold, teams, alliances, inspires) {
 
   for (const b of baseScores) {
     for (const s of [{seed:0,pts:0}, ...seedPts]) {
+      if (b.rank <= alliances && s.seed === 0) continue;
       for (const p of placePts) {
         if ((s.seed === 0) !== (p.place === 0)) continue;
 
@@ -988,6 +996,8 @@ document.getElementById('calculate').onclick = async () => {
         alliances,
         inspires
       );
+      document.getElementById("filterCustomThreshold").value = threshold;
+
     }, stopFlag);
     if (!stopFlag.stopped) {
       outputHeader.textContent += "\nCalculation complete.";
