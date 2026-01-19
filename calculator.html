@@ -184,7 +184,7 @@ function erfinv(x) {
 // FTC point calculation
 function baseRankPoints(teams, rank) {
   const val = (teams - 2*rank + 2) / (1.07 * teams);
-  return Math.floor(erfinv(val) * (7 / erfinv(1/1.07)) + 9.5);
+  return Math.ceil(erfinv(val) * (7 / erfinv(1/1.07)) + 9);
 }
 
 function calculate() {
