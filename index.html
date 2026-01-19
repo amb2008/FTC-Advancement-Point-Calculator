@@ -523,8 +523,6 @@ async function worstCaseMinPointsSampling(teams, number_of_alliances, num_inspir
   const place_pts = base_place_pts.slice(0, number_of_alliances);
   while (place_pts.length < number_of_alliances) place_pts.push(0);
   
-  const alliance_teams_count = 2 * number_of_alliances;
-  const alliance_team_indices = Array.from({length: alliance_teams_count}, (_, i) => i);
   const all_team_indices = Array.from({length: teams}, (_, i) => i);
   const inspire_points = [60, 30, 15].slice(0, num_inspire);
   const award_points = AWARD_POINTS_ALL;
@@ -541,8 +539,18 @@ async function worstCaseMinPointsSampling(teams, number_of_alliances, num_inspir
     let inspire_assignment = shuffledTeams.slice(0, num_inspire);
 
     // Generate random placement order independent of seed
+    const alliancesPicked = generateAlliances(teams, number_of_alliances);
     let alliance_placements = Array.from({length: number_of_alliances}, (_, i) => i + 1);
     alliance_placements = shuffleArray(alliance_placements); // Shuffled placements
+
+    const teamToAlliance = new Map();
+    alliancesPicked.forEach((pair, idx) => {
+      const seed = idx + 1;
+      pair.forEach(teamIdx => {
+        teamToAlliance.set(teamIdx, seed);
+      });
+    });
+
 
     // Build alliance bonus objects with seed and shuffled placement info
     const alliance_bonus_per_alliance = [];
@@ -564,9 +572,9 @@ async function worstCaseMinPointsSampling(teams, number_of_alliances, num_inspir
       const base = base_scores[i];
       let alliance_seed_pts = 0;
       let alliance_place_pts = 0;
-      if (alliance_team_indices.includes(i)) {
-        const alliance_index = Math.floor(i / 2);
-        const bonus = alliance_bonus_per_alliance[alliance_index];
+      if (teamToAlliance.has(i)) {
+        const seed = teamToAlliance.get(i);
+        const bonus = alliance_bonus_per_alliance[seed - 1];
         alliance_seed_pts = bonus.seedPts;
         alliance_place_pts = bonus.placePts;
       }
@@ -604,9 +612,9 @@ async function worstCaseMinPointsSampling(teams, number_of_alliances, num_inspir
       const base = base_scores[i];
       let alliance_seed = 0, alliance_seed_pts = 0;
       let alliance_place = 0, alliance_place_pts = 0;
-      if (alliance_team_indices.includes(i)) {
-        const alliance_index = Math.floor(i / 2);
-        const bonus = alliance_bonus_per_alliance[alliance_index];
+      if (teamToAlliance.has(i)) {
+        const seed = teamToAlliance.get(i);
+        const bonus = alliance_bonus_per_alliance[seed - 1];
         alliance_seed = bonus.seed;
         alliance_seed_pts = bonus.seedPts;
         alliance_place = bonus.place;
@@ -753,6 +761,7 @@ function computeWaysToReachThreshold(threshold, teams, alliances, inspires) {
   const tbody = document.getElementById("pathsBody");
   tbody.innerHTML = "";
 
+
   const baseScores = [];
   for (let r = 1; r <= teams; r++) {
     baseScores.push({ rank: r, base: points(teams, r, 0, 0, 0, 0) });
@@ -775,7 +784,12 @@ function computeWaysToReachThreshold(threshold, teams, alliances, inspires) {
   const results = [];
 
   for (const b of baseScores) {
-    for (const s of [{seed:0,pts:0}, ...seedPts]) {
+    const seedOptions = [...seedPts, { seed: 0, pts: 0 }];
+
+    for (const s of seedOptions) {
+      if (b.rank <= alliances) {
+        if (b.rank < s.seed) continue;
+      }
       for (const p of placePts) {
         if ((s.seed === 0) !== (p.place === 0)) continue;
 
@@ -988,6 +1002,7 @@ document.getElementById('calculate').onclick = async () => {
         alliances,
         inspires
       );
+      document.getElementById('filterCustomThreshold').value = threshold;
     }, stopFlag);
     if (!stopFlag.stopped) {
       outputHeader.textContent += "\nCalculation complete.";
