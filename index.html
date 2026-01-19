@@ -969,6 +969,11 @@ document.getElementById("filterCustomThreshold").addEventListener("change", calc
 
 function calculateWaysWithCustomThreshold() {
   const customThresholdInput = document.getElementById("filterCustomThreshold").value;
+  const rank = document.getElementById("filterRank").value;
+  const seed = document.getElementById("filterSeed").value;
+  const place = document.getElementById("filterPlace").value;
+  const inspire = document.getElementById("filterInspire").value;
+  const award = document.getElementById("filterAward").value;
   let threshold = parseInt(customThresholdInput);
   if (isNaN(threshold) || threshold <= 0) {
     threshold = currentPathsParams.threshold;
@@ -980,6 +985,13 @@ function calculateWaysWithCustomThreshold() {
     currentPathsParams.alliances,
     currentPathsParams.inspires
   );
+  // Reapply other filters
+  document.getElementById("filterRank").value = rank;
+  document.getElementById("filterSeed").value = seed;
+  document.getElementById("filterPlace").value = place;
+  document.getElementById("filterInspire").value = inspire;
+  document.getElementById("filterAward").value = award;
+  applyFilters();
 }
 
 const stopFlag = { stopped: false };
