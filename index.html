@@ -788,7 +788,7 @@ function computeWaysToReachThreshold(threshold, teams, alliances, inspires) {
 
     for (const s of seedOptions) {
       if (b.rank <= alliances) {
-        if (b.rank < s.seed) continue;
+        if (b.rank < s.seed || s.seed == 0) continue;
       }
       for (const p of placePts) {
         if ((s.seed === 0) !== (p.place === 0)) continue;
@@ -971,6 +971,7 @@ function calculateWaysWithCustomThreshold() {
   if (isNaN(threshold) || threshold <= 0) {
     threshold = currentPathsParams.threshold;
   }
+  
   computeWaysToReachThreshold(
     threshold,
     currentPathsParams.teams,
@@ -988,6 +989,12 @@ document.getElementById('calculate').onclick = async () => {
   const inspires = +document.getElementById('inspires').value;
   const slots = +document.getElementById('slots').value;
   const outputHeader = document.getElementById('outputHeader');
+
+  if (teams < slots || teams < alliances*2) {
+    alert("Number of teams must be greater than advancement slots and enough to fill all alliances.");
+    outputHeader.textContent = "Number of teams must be greater than advancement slots and enough to fill all alliances. Change your inputs and recalculate.";
+    return;
+  }
 
   outputHeader.textContent = "Starting calculation...";
 
