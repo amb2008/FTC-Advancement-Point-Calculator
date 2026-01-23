@@ -133,6 +133,26 @@ th {
 #nav a:hover {
   color: #7be27d;
 }
+
+.iframe-wrapper {
+  /* width: 100%; */
+  height: 322px;
+  width: 560px;
+  /* max-width: 900px; */
+  aspect-ratio: 3 / 2; /* matches 600x400 */
+  margin: 40px auto;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 0 20px rgba(0,0,0,0.8);
+}
+
+.iframe-wrapper iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: #121212;
+}
+
 </style>
 </head>
 
@@ -151,79 +171,14 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <a href="training.html">Trainer</a>
   </nav>
 </header>
-
-<div id="container">
-  <label>Total Teams <input id="teams" type="text" inputmode="numeric" value="16" min="1"></label>
-  <label>Your Rank <input id="rank" type="text" inputmode="numeric" value="5" min="1"></label>
-  <label>Alliance Seed (0 if none) <input id="seed" type="text" inputmode="numeric" value="0" min="0"></label>
-  <label>Alliance Placement (0–6) <input id="place" type="text" inputmode="numeric" value="0" min="0" max="4"></label>
-  <label>Inspire Place (0–3) <input id="inspire" type="text" inputmode="numeric" value="0" min="0" max="3"></label>
-  <label>Award Place (0–3) <input id="award" type="text" inputmode="numeric" value="0" min="0" max="3"></label>
-
-  <button onclick="calculate()">Calculate Points</button>
+<div class="iframe-wrapper">
+  <iframe
+    src="https://editor.p5js.org/Ace_number_1/full/7Hejyr_Bl"
+    loading="lazy"
+    allowfullscreen
+  ></iframe>
 </div>
 
-<table>
-<thead>
-<tr><th>Component</th><th>Points</th></tr>
-</thead>
-<tbody id="output">
-<tr><td colspan="2">Enter values and calculate</td></tr>
-</tbody>
-</table>
-
-<script>
-// Inverse error function
-function erfinv(x) {
-  const a = 0.147;
-  const ln = Math.log(1 - x*x);
-  const first = 2/(Math.PI*a) + ln/2;
-  const second = ln/a;
-  return Math.sign(x) * Math.sqrt(Math.sqrt(first*first - second) - first);
-}
-
-// FTC point calculation
-function baseRankPoints(teams, rank) {
-  const val = (teams - 2*rank + 2) / (1.07 * teams);
-  return Math.ceil(erfinv(val) * (7 / erfinv(1/1.07)) + 9);
-}
-
-function calculate() {
-  const teams = +document.getElementById("teams").value;
-  const rank = +document.getElementById("rank").value;
-  const seed = +document.getElementById("seed").value;
-  let place = +document.getElementById("place").value;
-  let inspire = +document.getElementById("inspire").value;
-  let award = +document.getElementById("award").value;
-
-  if (place > 4){
-    place = 0;
-  }
-  if (inspire > 3){
-    inspire = 0;
-  }
-  if (award > 3){
-    award = 0;
-  }
-
-  const base = baseRankPoints(teams, rank);
-  const seedPts = seed > 0 ? 21 - seed : 0;
-  const placePts = [0, 40, 20, 10, 5][place];
-  const inspirePts = [0, 60, 30, 15][inspire];
-  const awardPts = [0, 12, 6, 3][award];
-
-  const total = base + seedPts + placePts + inspirePts + awardPts;
-
-  document.getElementById("output").innerHTML = `
-    <tr><td>Base Rank</td><td>${base}</td></tr>
-    <tr><td>Alliance Seed</td><td>${seedPts}</td></tr>
-    <tr><td>Alliance Placement</td><td>${placePts}</td></tr>
-    <tr><td>Inspire Award</td><td>${inspirePts}</td></tr>
-    <tr><td>Other Award</td><td>${awardPts}</td></tr>
-    <tr class="total"><td>Total Points</td><td>${total}</td></tr>
-  `;
-}
-</script>
 
 </body>
 </html>
